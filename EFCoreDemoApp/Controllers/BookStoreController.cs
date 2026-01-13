@@ -2,6 +2,7 @@ using EFCoreDemoApp.DatabaseInfra;
 using EFCoreDemoApp.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace EFCoreDemoApp.Controllers
 {
@@ -36,23 +37,60 @@ namespace EFCoreDemoApp.Controllers
                 new Book { BookId = 2, Title = "The Lord of the Rings", AuthorId = 1 },
                 new Book { BookId = 3, Title = "The C Programming Language", AuthorId = 2 }
             };
+            var bookStore = new BookStore
+            {
+                BookStoreId = 1,
+                Name = "The Greatest BookStore",
+                Authors = authors,
+                Books = books
+            };
+
 
             if (_dbContext != null)
             {
-                if (_dbContext.Authors != null)
+                if (_dbContext.BookStores != null)
                 {
-                    foreach (var author in authors)
-                    {
-                        _dbContext.Authors.Add(author);
-                    }
+                    _dbContext.BookStores.Add(bookStore);
                 }
 
-                if (_dbContext.Books != null)
+                await _dbContext.SaveChangesAsync();
+            }
+
+            return Ok();
+        }
+
+
+        [HttpPost("alternateSeeding")]
+        public async Task<IActionResult> AlternateSeeding()
+        {
+            // Seed some initial data
+
+            _logger.LogInformation($"AlternateSeeding: Seeding some data ..");
+
+            var bookStore = new BookStore
+            {
+                Name = "The Greatest BookStore"
+            };
+
+            var author1 = new Author { Name = "J.R.R. Tolkien" };
+            var author2 = new Author { Name = "Kernighan, Ritchie" };
+
+            bookStore.Authors.Add(author1);
+            bookStore.Authors.Add(author2);
+
+            var book1 = new Book { Title = "The Hobbit", Author = author1 };
+            var book2 = new Book { Title = "The Lord of the Rings", Author = author1 };
+            var book3 = new Book { Title = "The C Programming Language", Author = author2 };
+
+            bookStore.Books.Add(book1);
+            bookStore.Books.Add(book2);
+            bookStore.Books.Add(book3);
+
+            if (_dbContext != null)
+            {
+                if (_dbContext.BookStores != null)
                 {
-                    foreach (var book in books)
-                    {
-                        _dbContext.Books.Add(book);
-                    }
+                    _dbContext.BookStores.Add(bookStore);
                 }
 
                 await _dbContext.SaveChangesAsync();
@@ -63,50 +101,117 @@ namespace EFCoreDemoApp.Controllers
 
 
         [HttpGet("Books")]
-        public async Task<IActionResult> GetAllBooks(bool readLinkedAuthors = false)
+        public async Task<IActionResult> GetAllBooks(int bookStoreId)
         {
-            if (_dbContext.Books != null)
+            if (_dbContext.BookStores != null)
             {
-                var books = await _dbContext.Books.ToListAsync();
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId).FirstOrDefaultAsync();
 
-                if (readLinkedAuthors)
+                var books = bookStore?.Books;
+
+                return Ok(books);
+            }
+
+            return Ok();
+        }
+
+
+        [HttpGet("BookTitles")]
+        public async Task<IActionResult> GetAllBookTitles(int bookStoreId)
+        {
+            if (_dbContext.BookStores != null)
+            {
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId).FirstOrDefaultAsync();
+
+                var bookTitles = bookStore?.Books.Select(p => p.Title);
+                return Ok(bookTitles);
+            }
+
+            return Ok();
+        }
+
+
+        [HttpGet("EagerLoadBooksAndAuthors")]
+        public async Task<IActionResult> EagerLoadBooksAndAuthors(int bookStoreId)
+        {
+            if (_dbContext.BookStores != null)
+            {
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId)
+                    .Include(bstore => bstore.Authors)
+                    .ThenInclude(author => author.Books)
+                    .Include(bstore => bstore.Books)
+                    .FirstOrDefaultAsync();
+
+                _logger.LogInformation("EagerLoadBooksAndAuthors: Eager loaded Books and Authors using left join on BookStore");
+
+                //var CProgrammingBook = bookStore?.Authors?.Where(a => a.Name?.Contains("Ritchie") ?? false).FirstOrDefault()?.Books?.FirstOrDefault()?.Title;
+                //_logger.LogInformation($"C: {CProgrammingBook}");
+
+                _logger.LogInformation("Collecting Authors ..");
+                var authors = bookStore?.Authors.Select(p => new { Name = p.Name, BookTitles = p.Books.Select(q => q.Title).ToList() });
+
+                if (authors != null)
                 {
-                    foreach (var book in books)
+                    foreach (var author in authors)
                     {
-                        var author = book.Author;
-                        _logger.LogInformation($"Book: {book.Title} written by {author?.Name}");
+                        _logger.LogInformation($"Author: {author.Name}, Books: {string.Join(", ", author.BookTitles)}");
                     }
                 }
 
-                //return Ok(books);
+                //_logger.LogInformation($"Authors: {Newtonsoft.Json.JsonConvert.SerializeObject(authors)}");
+
+
+                _logger.LogInformation("Collecting Books ..");
+                var books = bookStore?.Books.Select(p => new { p.Title, p.Author?.Name });
+
+                _logger.LogInformation($"Books: {Newtonsoft.Json.JsonConvert.SerializeObject(books)}");
+
+                _logger.LogInformation("Retrieved collection of all books along with their Author Name");
+
+                return Ok(books);
             }
 
             return Ok();
         }
 
         [HttpGet("Authors")]
-        public async Task<IActionResult> GetAllAuthors()
+        public async Task<IActionResult> GetAllAuthors(int bookStoreId)
         {
-            if (_dbContext.Authors != null)
+            if (_dbContext.BookStores != null)
             {
-                var authors = await _dbContext.Authors.ToListAsync();
-                //return Ok(authors);
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId).FirstOrDefaultAsync();
+
+                var authors = bookStore?.Authors;
+
+                return Ok(authors);
             }
 
             return Ok();
         }
 
         [HttpPost("Book")]
-        public async Task<IActionResult> CreateBook([FromBody] Book book)
+        public async Task<IActionResult> CreateBook(int bookStoreId, string bookTitle, string authorName)
         {
-            if (_dbContext.Books != null)
+            if (_dbContext.BookStores != null)
             {
-                var books = _dbContext.Books;
-                books.Add(book);
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId).FirstOrDefaultAsync();
+
+                var newAuthor = new Author
+                {
+                    Name = authorName, //"Dr Be"
+                };
+                bookStore?.Authors.Add(newAuthor);
+
+                var newBook = new Book
+                {
+                    Title = bookTitle, //"The Drunken Master",
+                    Author = newAuthor
+                };
+                bookStore?.Books.Add(newBook);
 
                 await _dbContext.SaveChangesAsync();
 
-                return Ok(book);
+                return Ok();
             }
 
             return BadRequest();
