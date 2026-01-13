@@ -157,6 +157,11 @@ Here is how Lazy Loading works in EF Core
                     .Include(bstore => bstore.Books)
                     .FirstOrDefaultAsync();
 -------------------------
+Push to GitHub
+
+git remote add origin https://github.com/PrasunThapliyal/EFCoreDemoApp.git
+git branch -M main
+git push -u origin main
 -------------------------
 -------------------------
 -------------------------
