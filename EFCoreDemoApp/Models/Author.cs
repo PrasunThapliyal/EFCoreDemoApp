@@ -4,6 +4,8 @@
     {
         public int AuthorId { get; set; }
         public string? Name { get; set; }
+        public int BookStoreId { get; set; }
+
         // The navigation property must be virtual for lazy loading
         public virtual ICollection<Book> Books { get; set; } = new List<Book>();
 

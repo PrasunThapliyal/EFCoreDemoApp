@@ -10,6 +10,7 @@ namespace EFCoreDemoApp.DatabaseInfra
     {
         private readonly ILogger<AppDbContext> _logger;
 
+        public DbSet<BookStore>? BookStores { get; set; }
         public DbSet<Author>? Authors { get; set; }
         public DbSet<Book>? Books { get; set; }
 
@@ -30,14 +31,6 @@ namespace EFCoreDemoApp.DatabaseInfra
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            //_logger.LogInformation($"AppDbContext: OnModelCreating. Seeding some data ..");
-
-            //// Seed some initial data
-            //modelBuilder.Entity<Author>().HasData(new Author { AuthorId = 1, Name = "J.R.R. Tolkien" });
-            //modelBuilder.Entity<Book>().HasData(
-            //    new Book { BookId = 1, Title = "The Hobbit", AuthorId = 1 },
-            //    new Book { BookId = 2, Title = "The Lord of the Rings", AuthorId = 1 }
-            //);
         }
     }
 }
