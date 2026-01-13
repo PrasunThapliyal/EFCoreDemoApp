@@ -30,6 +30,8 @@ namespace EFCoreDemoApp.DatabaseInfra
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            //_logger.LogInformation($"AppDbContext: OnModelCreating. Seeding some data ..");
+
             //// Seed some initial data
             //modelBuilder.Entity<Author>().HasData(new Author { AuthorId = 1, Name = "J.R.R. Tolkien" });
             //modelBuilder.Entity<Book>().HasData(

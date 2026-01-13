@@ -14,7 +14,15 @@ namespace EFCoreDemoApp
 
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddNewtonsoftJson(options =>
+                {
+                    // Configure Newtonsoft.Json options here as needed
+                    options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+                    options.SerializerSettings.ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver();
+                    // You can add more settings like NullValueHandling, Formatting, etc.
+                });
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -36,7 +44,7 @@ namespace EFCoreDemoApp
             app.UseHttpsRedirection();
             app.UseAuthorization();
 
-
+            // Create Database
             using (var scope = app.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
