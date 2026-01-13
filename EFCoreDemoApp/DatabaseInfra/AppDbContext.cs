@@ -25,8 +25,11 @@ namespace EFCoreDemoApp.DatabaseInfra
             _logger.LogInformation($"AppDbContext: OnConfiguring ..");
 
             // Configure SQLite and enable lazy loading proxies
-            optionsBuilder.UseLazyLoadingProxies()
-                          .UseSqlite("Data Source=bookstore.db");
+            optionsBuilder
+                //.LogTo(Console.WriteLine) // Log to the console (or any Action<string>)
+                //.EnableSensitiveDataLogging() // **Crucial**: Enables logging of parameter values
+                .UseLazyLoadingProxies()
+                .UseSqlite("Data Source=bookstore.db");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

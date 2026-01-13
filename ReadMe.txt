@@ -87,7 +87,75 @@ Key Concepts
 -------------------------
 Add Book, Author classes, DbContext, SQLite
 -------------------------
+Add BookStore class
+
 -------------------------
+Here are the relationships
+
+BookStore is the top entity in the object graph
+	Contains Collection of Books
+	Contains Collection of Authors
+Book
+	Contains 1 instance of Author
+Author
+	Contains Collection of Books
+-------------------------
+Here is how Lazy Loading works in EF Core
+	Lazy loading applies only to linked entities. Ex 1: Book contains Author, Ex2: Author contains collection of Books
+	Lazy loading does not apply to singular properties, for eg Book.Name
+
+	How to declare a linked entity or collection as Lazy:
+	Step 1:
+		In the model class, define the link as 'virtual'
+		Eg: class Book
+			public virtual Author? Author { get; set; }
+		Eg: class Author
+			public virtual ICollection<Book> Books { get; set; } = new List<Book>();
+		Eg: class BookStore
+			public virtual ICollection<Book> Books { get; set; } = [];
+			public virtual ICollection<Author> Authors { get; set; } = [];
+	Step 2:
+		In DbContext class, override OnConfiguring
+			optionsBuilder.UseLazyLoadingProxies()
+	Working:
+		In code, when you load BookStore, it doesn't load its collections yet (Perhaps collection count may be available - TBC)
+		The collection is IEnumerable, and when you iterate through this collection, one SELECT call is made per entity.
+			This is one cause of Select N+1 problem. The entire list of Books isn't loaded at once
+-------------------------
+	Eager Loading:
+		You could ask EF Core to load related entities as below:
+
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId)
+                    .Include(bstore => bstore.Books)
+                    .FirstOrDefaultAsync();
+
+		This will load the collection of Books within the bookstore instance with Id = bookStoreId
+		The loading is done by appending a LEFT JOIN to the select query
+		Note 1: BookStore.Authors is still not loaded
+		Note 2: Book.Author is still not loaded
+
+		To eager load both Books and Authors linked to BookStore
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId)
+                    .Include(bstore => bstore.Authors)
+                    .Include(bstore => bstore.Books)
+                    .FirstOrDefaultAsync();
+
+		Books and Authors are eager loaded by appending two LEFT joins to the BookStore SELECT query
+		Note 1: BookStore.Author.Book is still not loaded
+		Note 2: Surprisingly, BookStore.Book.Author is loaded
+				BookStore.Book.Author.Books is, of course, not loaded
+
+		The following eager loads below relationships, although there are now even more joins
+			BookStore.Authors
+			BookStore.Authors.Books (see .ThenInclude)
+			BookStore.Books
+			BookStore.Books.Author
+
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId)
+                    .Include(bstore => bstore.Authors)
+                    .ThenInclude(author => author.Books)
+                    .Include(bstore => bstore.Books)
+                    .FirstOrDefaultAsync();
 -------------------------
 -------------------------
 -------------------------
