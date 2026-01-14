@@ -174,6 +174,79 @@ namespace EFCoreDemoApp.Controllers
             return Ok();
         }
 
+
+        [HttpGet("Test")]
+        public async Task<IActionResult> Test(int bookStoreId = 1)
+        {
+            if (_dbContext.BookStores != null)
+            {
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId)
+                    .FirstOrDefaultAsync();
+                /*
+                      SELECT "b"."BookStoreId", "b"."Name"
+                      FROM "BookStores" AS "b"
+                      WHERE "b"."BookStoreId" = @__bookStoreId_0
+                      LIMIT 1
+                 * 
+                 * */
+
+                var authors = bookStore?.Authors.ToList();
+                /*
+                      SELECT "a"."AuthorId", "a"."BookStoreId", "a"."Name"
+                      FROM "Authors" AS "a"
+                      WHERE "a"."BookStoreId" = @__p_0
+                 * 
+                 * */
+
+                var books = bookStore?.Books.ToList();
+                /*
+                      SELECT "b"."BookId", "b"."AuthorId", "b"."BookStoreId", "b"."Title"
+                      FROM "Books" AS "b"
+                      WHERE "b"."BookStoreId" = @__p_0
+                 * 
+                 * */
+
+                /*
+                 * This seems to be a missed opportunity by EF Core
+                 * We've already read all Authors and Books
+                 * At this point, EF Core would have known all entity IDs as well as Foreign Key IDs
+                 * Yet, we have to make more queries to establish BookStore.Author.Books relationship
+                 * And unless we do explicit eager loading, it still leads to N+1 for BookStore.Author.Books
+                 * 
+                 * */
+
+
+                if (_dbContext.Authors != null)
+                {
+                    var authorsBooks = await _dbContext.Authors.Include(a => a.Books).ToListAsync();
+                    /*
+                          SELECT "a"."AuthorId", "a"."BookStoreId", "a"."Name", "b"."BookId", "b"."AuthorId", "b"."BookStoreId", "b"."Title"
+                          FROM "Authors" AS "a"
+                          LEFT JOIN "Books" AS "b" ON "a"."AuthorId" = "b"."AuthorId"
+                          ORDER BY "a"."AuthorId"
+                     * 
+                     * */
+                }
+
+                if (authors != null)
+                {
+                    foreach (var author in authors)
+                    {
+                        _logger.LogInformation($"Author: {author.Name}, Books: {string.Join(", ", author.Books.Select(p => p.Title))}");
+                    }
+                }
+
+                var booksAndAuthors = books?.Select(p => new { p.Title, p.Author?.Name });
+
+                _logger.LogInformation($"Books: {Newtonsoft.Json.JsonConvert.SerializeObject(booksAndAuthors)}");
+
+                return Ok(books);
+            }
+
+            return Ok();
+        }
+
+
         [HttpGet("Authors")]
         public async Task<IActionResult> GetAllAuthors(int bookStoreId)
         {
