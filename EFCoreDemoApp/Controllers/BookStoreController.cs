@@ -69,18 +69,19 @@ namespace EFCoreDemoApp.Controllers
 
             var bookStore = new BookStore
             {
+                BookStoreId = 1,
                 Name = "The Greatest BookStore"
             };
 
-            var author1 = new Author { Name = "J.R.R. Tolkien" };
-            var author2 = new Author { Name = "Kernighan, Ritchie" };
+            var author1 = new Author { AuthorId = 1, Name = "J.R.R. Tolkien" };
+            var author2 = new Author { AuthorId = 2, Name = "Kernighan, Ritchie" };
 
             bookStore.Authors.Add(author1);
             bookStore.Authors.Add(author2);
 
-            var book1 = new Book { Title = "The Hobbit", Author = author1 };
-            var book2 = new Book { Title = "The Lord of the Rings", Author = author1 };
-            var book3 = new Book { Title = "The C Programming Language", Author = author2 };
+            var book1 = new Book { BookId = 1, Title = "The Hobbit", Author = author1 };
+            var book2 = new Book { BookId = 2, Title = "The Lord of the Rings", Author = author1 };
+            var book3 = new Book { BookId = 3, Title = "The C Programming Language", Author = author2 };
 
             bookStore.Books.Add(book1);
             bookStore.Books.Add(book2);
@@ -105,7 +106,9 @@ namespace EFCoreDemoApp.Controllers
         {
             if (_dbContext.BookStores != null)
             {
-                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId).FirstOrDefaultAsync();
+                var bookStore = await _dbContext.BookStores.Where(p => p.BookStoreId == bookStoreId)
+                    .Include(bookStore => bookStore.Books)
+                    .FirstOrDefaultAsync();
 
                 var books = bookStore?.Books;
 

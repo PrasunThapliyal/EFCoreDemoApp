@@ -1,8 +1,5 @@
 ﻿using EFCoreDemoApp.Models;
 using Microsoft.EntityFrameworkCore;
-using SQLitePCL;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 
 namespace EFCoreDemoApp.DatabaseInfra
 {
@@ -22,18 +19,38 @@ namespace EFCoreDemoApp.DatabaseInfra
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            _logger.LogInformation($"AppDbContext: OnConfiguring ..");
+            _logger.LogInformation($"AppDbContext: OnConfiguring **** ..");
 
-            // Configure SQLite and enable lazy loading proxies
-            optionsBuilder
+            if (!optionsBuilder.IsConfigured)
+            {
+                _logger.LogInformation($"AppDbContext: OnConfiguring: **** Configuring OptionsBuilder to use Postgres with Snake Case convention ..");
+
+
+                var builder = new ConfigurationBuilder()
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                var configuration = builder.Build();
+                var connStr = configuration.GetConnectionString("PostgresConnection");
+
+                // Configure SQLite and enable lazy loading proxies
+                optionsBuilder
                 //.LogTo(Console.WriteLine) // Log to the console (or any Action<string>)
                 //.EnableSensitiveDataLogging() // **Crucial**: Enables logging of parameter values
                 .UseLazyLoadingProxies()
-                .UseSqlite("Data Source=bookstore.db");
+                //.UseSqlite("Data Source=bookstore.db");
+                .UseNpgsql(connStr)
+                .UseSnakeCaseNamingConvention();
+            }
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            _logger.LogInformation($"AppDbContext: OnModelCreating ..");
+
+            //modelBuilder.HasDefaultSchema("efcoredemoapp");
+
+            //modelBuilder.Entity<Book>().ToTable("books");
+            //modelBuilder.Entity<Author>().ToTable("authors");
+            //modelBuilder.Entity<BookStore>().ToTable("bookstores");
         }
     }
 }
